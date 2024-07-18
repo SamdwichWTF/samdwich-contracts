@@ -1,15 +1,16 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer};
+use pyth_solana_receiver_sdk::price_update::{PriceUpdateV2, get_feed_id_from_hex};
 
-declare_id!("HNtzKW53K3Dx4vNUCuGrHqsDGY8w6RiXqrxnh7BxRfGJ");
+declare_id!("EPP6YukxHBvsQwd1JogpM7Y1gcUirXMXU77hPPZ4bUSM");
 
-// main net beta addresses
-// const _USDC_MINT: sol_pubkey = pubkey!("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
-// const _USDT_MINT: sol_pubkey = pubkey!("BQcdHdAQW1hczDbBi9hiegXAR7A98Q9jx3X3iBBBDiq4");
+// const USDC_MINT: &str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+// const USDT_MINT: &str = "BQcdHdAQW1hczDbBi9hiegXAR7A98Q9jx3X3iBBBDiq4";
 const ADMIN: &str = "7oBnRhq4SWr71CnMwr4U9SVcoLhrKMdALDxv9Kbq8RME";
 
 #[program]
 pub mod presale {
+
     use super::*;
 
     pub fn initialize(ctx: Context<InitializeContext>) -> Result<()> {
@@ -84,7 +85,7 @@ pub mod presale {
     }
 
     // amount will be in usdc or usdt (or sol -> handle separately)
-    pub fn purchase_tokens_usd(ctx: Context<BuyTokens>, amount: u64) -> Result<()> {
+    pub fn purchase_tokens_usd(ctx: Context<PurchaseTokensUSDContext>, amount: u64) -> Result<()> {
         let presale_info = &mut ctx.accounts.presale_info;
         let stage_data = &mut ctx.accounts.stage_data;
 
@@ -131,9 +132,65 @@ pub mod presale {
         Ok(())
     }
 
-    // pub purchase_tokens_sol(ctx: Context<PurchaseTokensSOL>, stage: u8, amount: u64) -> Result<()> {
-    //     Ok(())
-    // }
+    pub fn purchase_tokens_sol(ctx: Context<PurchaseTokensSOLContext>, amount: u64) -> Result<()> {
+        let presale_info = &mut ctx.accounts.presale_info;
+        let stage_data = &mut ctx.accounts.stage_data;
+        let price_update = &mut ctx.accounts.price_update;
+
+        require!(presale_info.is_active, PresaleError::PresaleInactive);
+
+        let index = presale_info.index;
+
+        require_keys_eq!(presale_info.stage_data[index as usize], stage_data.key()); // provided pubkey for stage_data matches current stage
+
+        let price = presale_info.stages[index as usize].price;
+        let token_amount = presale_info.stages[index as usize].token_amount;
+
+        let total_stage_amount = stage_data.total_stage_amount;
+        
+        // convert amount from SOL to USD
+        let maximum_age: u64 = 3600;
+        let feed_id: [u8; 32] = get_feed_id_from_hex("0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d")?;
+        
+        let usd_price = price_update.get_price_no_older_than(&Clock::get()?, maximum_age, &feed_id)?;
+        // decimals conversion
+        let sol_price_in_usd: u64 = usd_price.price as u64;
+        let sol_price_exponent: i32 = usd_price.exponent;
+
+        let sol_price = (sol_price_in_usd as f64) * 10f64.powi(sol_price_exponent);
+        let amount_usdc_f64 = price as f64 / 10f64.powi(6);
+        let token_price_sol = amount_usdc_f64 / sol_price;
+        // price for 1 token in SOL
+        let token_price_sol_u64 = (token_price_sol * 10f64.powi(9)) as u64; // Convert SOL to lamports (1 SOL = 10^9 lamports)
+
+        let mut purchased_amount = amount / token_price_sol_u64;
+
+        if token_amount < (total_stage_amount + purchased_amount) {
+            // if we have hitted max amount for current stage it should be set as inactive
+            purchased_amount = token_amount - total_stage_amount;
+            presale_info.is_active = false;
+        }
+
+        let cpi_context = CpiContext::new(
+            ctx.accounts.system_program.to_account_info(), 
+            anchor_lang::system_program::Transfer {
+                from: ctx.accounts.buyer.to_account_info().clone(),
+                to: ctx.accounts.presale_account.clone(),
+            });
+        anchor_lang::system_program::transfer(cpi_context, token_amount * token_price_sol_u64)?;
+
+        // add address and purchased_amount to presale contract
+        stage_data.purchase_records.push(PurchaseRecord {
+            buyer: ctx.accounts.buyer.key(),
+            amount: purchased_amount,
+        });    
+
+        stage_data.total_stage_amount += purchased_amount;
+        presale_info.total_supply += purchased_amount;
+        presale_info.funds_raised += purchased_amount * price;
+
+        Ok(())
+    }
 
 }
 
@@ -160,7 +217,7 @@ pub struct StartNextStageContext<'info> {
 }
 
 #[derive(Accounts)]
-pub struct BuyTokens<'info> {
+pub struct PurchaseTokensUSDContext<'info> {
     #[account(mut)]
     pub presale_info: Account<'info, PresaleInfo>,
     #[account(
@@ -177,6 +234,26 @@ pub struct BuyTokens<'info> {
     #[account(mut)]
     pub buyer_token_account: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct PurchaseTokensSOLContext<'info> {
+    #[account(mut)]
+    pub presale_info: Account<'info, PresaleInfo>,
+    #[account(
+        mut,
+        realloc = 21 + 40 * (stage_data.purchase_records.len() + 1),
+        realloc::payer = buyer,
+        realloc::zero = true
+    )]
+    pub stage_data: Account<'info, StageData>,
+    /// CHECK: this will be only address to send SOL to, so it safe
+    #[account(mut)]
+    pub presale_account: AccountInfo<'info>,
+    #[account(mut)]
+    pub buyer: Signer<'info>,
+    pub price_update: Account<'info, PriceUpdateV2>,
     pub system_program: Program<'info, System>,
 }
 
