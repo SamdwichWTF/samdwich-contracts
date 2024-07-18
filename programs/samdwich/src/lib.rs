@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer};
 use pyth_solana_receiver_sdk::price_update::{PriceUpdateV2, get_feed_id_from_hex};
 
-declare_id!("EPP6YukxHBvsQwd1JogpM7Y1gcUirXMXU77hPPZ4bUSM");
+declare_id!("FtDJTaT2Z7SECAWDS5KtXVFyzAD7ZDq73tjq5iWpmYpV");
 
 // const USDC_MINT: &str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 // const USDT_MINT: &str = "BQcdHdAQW1hczDbBi9hiegXAR7A98Q9jx3X3iBBBDiq4";
@@ -192,6 +192,26 @@ pub mod presale {
         Ok(())
     }
 
+    // only admin can call this function
+    pub fn add_address_to_presale(ctx: Context<AddAddressContext>, address: Pubkey, amount: u64, usd_amount: u64) -> Result<()> {
+        require_keys_eq!(ctx.accounts.admin.key(), ADMIN.parse::<Pubkey>().unwrap());
+
+        let presale_info = &mut ctx.accounts.presale_info;
+        let stage_data = &mut ctx.accounts.stage_data;
+
+        // add address and purchased_amount to presale contract
+        stage_data.purchase_records.push(PurchaseRecord {
+            buyer: address,
+            amount: amount,
+        });    
+
+        stage_data.total_stage_amount += amount;
+        presale_info.total_supply += amount;
+        presale_info.funds_raised += usd_amount;
+
+        Ok(())
+    }
+
 }
 
 #[derive(Accounts)]
@@ -254,6 +274,22 @@ pub struct PurchaseTokensSOLContext<'info> {
     #[account(mut)]
     pub buyer: Signer<'info>,
     pub price_update: Account<'info, PriceUpdateV2>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct AddAddressContext<'info> {
+    #[account(mut)]
+    pub presale_info: Account<'info, PresaleInfo>,
+    #[account(
+        mut,
+        realloc = 21 + 40 * (stage_data.purchase_records.len() + 1),
+        realloc::payer = admin,
+        realloc::zero = true
+    )]
+    pub stage_data: Account<'info, StageData>,
+    #[account(mut)]
+    pub admin: Signer<'info>,
     pub system_program: Program<'info, System>,
 }
 
