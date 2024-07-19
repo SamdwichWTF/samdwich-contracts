@@ -5,7 +5,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-samdwich = "FtDJTaT2Z7SECAWDS5KtXVFyzAD7ZDq73tjq5iWpmYpV"
+samdwich = "BSp6YkTs7NXyGjezJNRD8yJv1tshbLRRqDVfrJEesARg"
 
 [registry]
 url = "https://api.apr.dev"

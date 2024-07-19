@@ -2,11 +2,9 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer};
 use pyth_solana_receiver_sdk::price_update::{PriceUpdateV2, get_feed_id_from_hex};
 
-declare_id!("FtDJTaT2Z7SECAWDS5KtXVFyzAD7ZDq73tjq5iWpmYpV");
+declare_id!("BSp6YkTs7NXyGjezJNRD8yJv1tshbLRRqDVfrJEesARg");
 
-// const USDC_MINT: &str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
-// const USDT_MINT: &str = "BQcdHdAQW1hczDbBi9hiegXAR7A98Q9jx3X3iBBBDiq4";
-const ADMIN: &str = "7oBnRhq4SWr71CnMwr4U9SVcoLhrKMdALDxv9Kbq8RME";
+const ADMIN: &str = "6SQbWPGZmr38UK3QThN3qSWzpN16LM2oJwhimish44u8";
 
 #[program]
 pub mod presale {
@@ -66,8 +64,7 @@ pub mod presale {
         let presale_info = &mut ctx.accounts.presale_info;
         let stage_data = &mut ctx.accounts.stage_data;
 
-        // TODO: uncomment this for production!
-        // require!(!presale_info.is_active, PresaleError::PreviousStageActive);
+        require!(!presale_info.is_active, PresaleError::PreviousStageActive);
 
         require!(presale_info.index < 6, PresaleError::InvalidStage);
 
@@ -177,7 +174,7 @@ pub mod presale {
                 from: ctx.accounts.buyer.to_account_info().clone(),
                 to: ctx.accounts.presale_account.clone(),
             });
-        anchor_lang::system_program::transfer(cpi_context, token_amount * token_price_sol_u64)?;
+        anchor_lang::system_program::transfer(cpi_context, purchased_amount * token_price_sol_u64)?;
 
         // add address and purchased_amount to presale contract
         stage_data.purchase_records.push(PurchaseRecord {
