@@ -2,9 +2,12 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer};
 use pyth_solana_receiver_sdk::price_update::{PriceUpdateV2, get_feed_id_from_hex};
 
-declare_id!("BSp6YkTs7NXyGjezJNRD8yJv1tshbLRRqDVfrJEesARg");
+declare_id!("4Fwq3dAeUA3dJcVoseiPAY8jNQmLgexADy6ciU1t6Bte");
 
-const ADMIN: &str = "6SQbWPGZmr38UK3QThN3qSWzpN16LM2oJwhimish44u8";
+const ADMIN: &str = "3W5SEfY7Bmqzdk38Ni3Vfv4BhLjaMdQUcKeqYGyDc41X";
+const PRESALE_ACCOUNT: &str = "HaqqaBPQrdE8U3ZWH36PJNHVWVGTs2UwuSzkDu4UUqCR";
+const PRESALE_USDC_ACCOUNT: &str = "4WnHLaZNHBYeH7JYbJfJ9YaEgXhr12zLz6VNb4My29pP";
+const PRESALE_USDT_ACCOUNT: &str = "AYdcNvq4UgeA1BqQLmuyWi7hYX3F2TiX1H9tMR61jDLr";
 
 #[program]
 pub mod presale {
@@ -83,6 +86,8 @@ pub mod presale {
 
     // amount will be in usdc or usdt (or sol -> handle separately)
     pub fn purchase_tokens_usd(ctx: Context<PurchaseTokensUSDContext>, amount: u64) -> Result<()> {
+        require!(ctx.accounts.presale_token_account.key() == PRESALE_USDC_ACCOUNT.parse::<Pubkey>().unwrap() || ctx.accounts.presale_token_account.key() == PRESALE_USDT_ACCOUNT.parse::<Pubkey>().unwrap(), PresaleError::WrongAccounts);
+
         let presale_info = &mut ctx.accounts.presale_info;
         let stage_data = &mut ctx.accounts.stage_data;
 
@@ -130,6 +135,9 @@ pub mod presale {
     }
 
     pub fn purchase_tokens_sol(ctx: Context<PurchaseTokensSOLContext>, amount: u64) -> Result<()> {
+
+        require_keys_eq!(ctx.accounts.presale_account.key(), PRESALE_ACCOUNT.parse::<Pubkey>().unwrap());
+
         let presale_info = &mut ctx.accounts.presale_info;
         let stage_data = &mut ctx.accounts.stage_data;
         let price_update = &mut ctx.accounts.price_update;
@@ -331,10 +339,8 @@ pub enum PresaleError {
     PreviousStageActive,
     #[msg("Presale is not active")]
     PresaleInactive,
-    #[msg("Insufficient funds")]
-    InsufficientFunds,
     #[msg("Invalid stage")]
     InvalidStage,
-    #[msg("Maximum raise exceeded")]
-    MaxRaiseExceeded,
+    #[msg("Wrong accounts passed")]
+    WrongAccounts
 }

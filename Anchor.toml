@@ -5,13 +5,16 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-samdwich = "BSp6YkTs7NXyGjezJNRD8yJv1tshbLRRqDVfrJEesARg"
+samdwich = "4Fwq3dAeUA3dJcVoseiPAY8jNQmLgexADy6ciU1t6Bte"
+
+[programs.mainnet]
+samdwich = "4Fwq3dAeUA3dJcVoseiPAY8jNQmLgexADy6ciU1t6Bte"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "devnet"
+cluster = "mainnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
