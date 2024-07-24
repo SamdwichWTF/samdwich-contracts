@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer};
 use pyth_solana_receiver_sdk::price_update::{PriceUpdateV2, get_feed_id_from_hex};
 
-declare_id!("4Fwq3dAeUA3dJcVoseiPAY8jNQmLgexADy6ciU1t6Bte");
+declare_id!("u4h8vBXwx3fqM8Yopqk8U7hBYJG75nyrWqBsy8cNUBE");
 
 const ADMIN: &str = "3W5SEfY7Bmqzdk38Ni3Vfv4BhLjaMdQUcKeqYGyDc41X";
 const PRESALE_ACCOUNT: &str = "HaqqaBPQrdE8U3ZWH36PJNHVWVGTs2UwuSzkDu4UUqCR";
