@@ -28,27 +28,27 @@ pub mod presale {
         presale_info.total_supply = 0;
         presale_info.stages = [
             PresaleStage {
-                token_amount: 4_444_444_444_44,
+                token_amount: 4_444_444_444,
                 price: 30,
             },
             PresaleStage {
-                token_amount: 8_888_888_888_88,
+                token_amount: 8_888_888_888,
                 price: 31,
             },
             PresaleStage {
-                token_amount: 17_777_777_777_76,
+                token_amount: 17_777_777_777,
                 price: 32,
             },
             PresaleStage {
-                token_amount: 44_444_444_444_40,
+                token_amount: 44_444_444_444,
                 price: 33,
             },
             PresaleStage {
-                token_amount: 88_888_888_888_80,
+                token_amount: 88_888_888_888,
                 price: 34,
             },
             PresaleStage {
-                token_amount: 186_666_666_666_48,
+                token_amount: 186_666_666_666,
                 price: 35,
             },
         ];
