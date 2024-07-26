@@ -5,10 +5,10 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-samdwich = "u4h8vBXwx3fqM8Yopqk8U7hBYJG75nyrWqBsy8cNUBE"
+samdwich = "AgNtEKRS7EY3HDUH1PoWPHD8FkkAMpWHisCFfmDtobTT"
 
 [programs.mainnet]
-samdwich = "u4h8vBXwx3fqM8Yopqk8U7hBYJG75nyrWqBsy8cNUBE"
+samdwich = "AgNtEKRS7EY3HDUH1PoWPHD8FkkAMpWHisCFfmDtobTT"
 
 [registry]
 url = "https://api.apr.dev"
